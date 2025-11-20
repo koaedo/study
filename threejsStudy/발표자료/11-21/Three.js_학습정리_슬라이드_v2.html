@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 학습 정리 - 3D 웹 개발의 이해</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+        
+        .slide-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            z-index: 2;
+        }
+        
+        .slide.prev {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        /* 타이틀 슬라이드 */
+        .title-slide {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .title-slide h1 {
+            font-size: 4.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        .title-slide p {
+            font-size: 2em;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.3s;
+            animation-fill-mode: both;
+        }
+        
+        /* 이미지 중심 슬라이드 */
+        .image-slide {
+            background: white;
+            color: #333;
+            text-align: center;
+        }
+        
+        .image-slide .slide-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            line-height: 60px;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        
+        .image-slide h2 {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 40px;
+        }
+        
+        .image-slide img {
+            max-width: 85%;
+            max-height: 60vh;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .image-slide img:hover {
+            transform: scale(1.02);
+        }
+        
+        .image-caption {
+            margin-top: 25px;
+            font-size: 1.3em;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* 텍스트 중심 슬라이드 */
+        .content-slide {
+            background: white;
+            color: #333;
+        }
+        
+        .slide-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .slide-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            line-height: 60px;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .slide-title {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .slide-content {
+            max-width: 1100px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .insight-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .insight-title {
+            font-size: 1.8em;
+            color: #856404;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .insight-box p {
+            font-size: 1.2em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+        
+        .key-points {
+            background: #d1ecf1;
+            border-left: 5px solid #17a2b8;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .key-points h3 {
+            color: #0c5460;
+            margin-bottom: 20px;
+            font-size: 1.6em;
+        }
+        
+        .key-points ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .key-points li {
+            padding: 12px 0;
+            padding-left: 35px;
+            position: relative;
+            font-size: 1.15em;
+            line-height: 1.6;
+        }
+        
+        .key-points li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #17a2b8;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .content-box {
+            background: #f8f9ff;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+        
+        .content-box h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.6em;
+        }
+        
+        .content-box p, .content-box li {
+            font-size: 1.15em;
+            line-height: 1.8;
+        }
+        
+        .comparison-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 20px 0;
+        }
+        
+        .comparison-item {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-item h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        /* 네비게이션 */
+        .nav-button {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-button:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .nav-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .nav-button.prev {
+            left: 30px;
+        }
+        
+        .nav-button.next {
+            right: 30px;
+        }
+        
+        /* 슬라이드 인디케이터 */
+        .slide-indicator {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            max-width: 90%;
+            overflow-x: auto;
+        }
+        
+        .indicator-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        
+        .indicator-dot.active {
+            background: #667eea;
+            transform: scale(1.3);
+        }
+        
+        .indicator-dot:hover {
+            background: rgba(102, 126, 234, 0.7);
+        }
+        
+        /* 슬라이드 번호 */
+        .slide-count {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            z-index: 1000;
+        }
+        
+        /* 이미지 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            animation: zoomIn 0.3s;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            color: white;
+            font-size: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.5);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            transform: scale(1.1) rotate(90deg);
+        }
+        
+        .modal-caption {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        /* 애니메이션 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 30px 20px;
+            }
+            
+            .title-slide h1 {
+                font-size: 2.5em;
+            }
+            
+            .slide-title, .image-slide h2 {
+                font-size: 2em;
+            }
+            
+            .comparison-box {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-button {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            .nav-button.prev {
+                left: 10px;
+            }
+            
+            .nav-button.next {
+                right: 10px;
+            }
+            
+            .modal-close {
+                top: 15px;
+                right: 15px;
+                font-size: 40px;
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <!-- 슬라이드 1: 타이틀 -->
+        <div class="slide title-slide active">
+            <h1>🎨 Three.js 학습 정리</h1>
+            <p>3D 웹 개발을 통해 배운 것들</p>
+            <p style="margin-top: 40px; font-size: 0.8em; opacity: 0.8;">화살표 키 또는 버튼으로 이동 →</p>
+        </div>
+
+        <!-- 슬라이드 2: 3D 씬의 기본 구성 요소 - 이미지 -->
+        <div class="slide image-slide">
+            <div class="slide-number">1</div>
+            <h2>3D 씬의 기본 구성 요소</h2>
+            <img src="./image_1_basic_scene.png" alt="3D 씬의 기본 구성">
+            <div class="image-caption">Scene, Mesh, Camera, Light, Renderer</div>
+        </div>
+
+        <!-- 슬라이드 3: 3D 씬 - 깨달은 점 -->
+        <!-- <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">1</div>
+                <h2 class="slide-title">3D 씬의 기본 구성 요소</h2>
+            </div>
+            <div class="slide-content">
+                <div class="insight-box">
+                    <div class="insight-title">💡 깨달은 점</div>
+                    <p>단순히 프로그램을 사용할 때는 객체의 <strong>x, y, z 좌표</strong>만 생각했었습니다.</p>
+                    <p>하지만 직접 3D 웹을 개발하려고 보니, 좌표뿐만 아니라 <strong>카메라, 조명, 재질</strong> 등 다양한 요소가 필요하다는 것을 알게 되었습니다!</p>
+                </div>
+            </div>
+        </div> -->
+
+        <!-- 슬라이드 4: 3D 씬 - 핵심 요소 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">1</div>
+                <h2 class="slide-title">핵심 구성 요소</h2>
+            </div>
+            <div class="slide-content">
+                <div class="key-points">
+                    <ul>
+                        <li><strong>Geometry (모양)</strong> - 3D 객체의 기본 형태를 정의합니다</li>
+                        <li><strong>Material (재질)</strong> - 객체의 표면 질감과 색상을 결정합니다</li>
+                        <li><strong>Mesh (메쉬)</strong> - Geometry와 Material이 결합된 실제 3D 객체</li>
+                        <li><strong>Camera (카메라)</strong> - 어느 위치에서 장면을 바라볼지 결정</li>
+                        <li><strong>Light (조명)</strong> - 빛의 위치와 강도에 따라 색상과 명암이 변함</li>
+                        <li><strong>Renderer (렌더러)</strong> - 모든 요소를 화면에 그려냅니다</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 5: Near & Far - 이미지 -->
+        <div class="slide image-slide">
+            <div class="slide-number">2</div>
+            <h2>카메라의 시야 범위</h2>
+            <img src="./image_2_near_far.png" alt="Near와 Far">
+            <div class="image-caption">Field of View (시야각)와 Near/Far 범위</div>
+        </div>
+
+        <!-- 슬라이드 6: Near & Far - 설명 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">2</div>
+                <h2 class="slide-title">카메라는 정말 '카메라'다</h2>
+            </div>
+            <div class="slide-content">
+                <div class="insight-box">
+                    <div class="insight-title">💡 깨달은 점</div>
+                    <p>우리 눈과 달리, 카메라는 <strong>Near와 Far 범위</strong>가 있어서 이 범위를 벗어난 객체는 렌더링되지 않습니다.</p>
+                    <p>실제 카메라로 촬영한다는 생각으로 개발해야 합니다!</p>
+                </div>
+                <div class="key-points">
+                    <ul>
+                        <li><strong>Near (최소 거리)</strong> - 카메라에서 이 거리보다 가까우면 안 보임</li>
+                        <li><strong>Far (최대 거리)</strong> - 카메라에서 이 거리보다 멀면 안 보임</li>
+                        <li><strong>Field of View (시야각)</strong> - 카메라가 한 번에 볼 수 있는 각도</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 7: Near 이해하기 -->
+        <!-- <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">2</div>
+                <h2 class="slide-title">Near가 왜 필요할까?</h2>
+            </div>
+            <div class="slide-content">
+                <div class="content-box">
+                    <h3>각도가 아니라 실제 거리 문제!</h3>
+                    <ul style="margin-left: 20px; margin-top: 15px;">
+                        <li><strong>실제 카메라 비유:</strong> 렌즈에 손가락을 바짝 붙이면 아무것도 안 보이는 것처럼, 3D 카메라도 너무 가까우면 렌더링하지 않음</li>
+                        <li style="margin-top: 10px;"><strong>깊이 버퍼 정밀도:</strong> Near와 Far 범위가 너무 크면 깊이 계산이 부정확해짐</li>
+                        <li style="margin-top: 10px;"><strong>일반적인 설정:</strong> Near = 0.1, Far = 1000</li>
+                    </ul>
+                </div>
+                <div class="insight-box" style="margin-top: 20px;">
+                    <p style="font-size: 1.3em; text-align: center;">💡 <strong>카메라 앞 10cm(near) ~ 1km(far) 범위만 렌더링!</strong></p>
+                </div>
+            </div>
+        </div> -->
+
+        <!-- 슬라이드 8: 카메라 종류 - 이미지 -->
+        <div class="slide image-slide">
+            <div class="slide-number">3</div>
+            <h2>카메라의 종류</h2>
+            <img src="./image_3_camera.png" alt="카메라 비교">
+            <div class="image-caption">Perspective Camera vs Orthographic Camera</div>
+        </div>
+
+        <!-- 슬라이드 9: 카메라 비교 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">3</div>
+                <h2 class="slide-title">두 카메라의 차이점</h2>
+            </div>
+            <div class="slide-content">
+                <div class="comparison-box">
+                    <div class="comparison-item">
+                        <h4>📷 Perspective Camera</h4>
+                        <p><strong>원근감이 있음</strong></p>
+                        <p>멀리 있는 물체가 작게 보임</p>
+                        <p style="margin-top: 15px;"><strong>예시:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>🎮 1인칭 게임</li>
+                            <li>🏗️ 건축 워크스루</li>
+                            <li>🥽 VR/AR</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="comparison-item">
+                        <h4>📐 Orthographic Camera</h4>
+                        <p><strong>원근감이 없음</strong></p>
+                        <p>거리와 관계없이 크기 동일</p>
+                        <p style="margin-top: 15px;"><strong>예시:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>📐 CAD 설계</li>
+                            <li>🎮 2D 게임</li>
+                            <li>🗺️ 미니맵</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 10: 카메라 비유 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">3</div>
+                <h2 class="slide-title">실생활 비유</h2>
+            </div>
+            <div class="slide-content">
+                <div class="insight-box">
+                    <div class="insight-title">📷 Perspective Camera</div>
+                    <ul style="margin-left: 20px; margin-top: 10px; font-size: 1.2em;">
+                        <li>📸 사진: 멀리 있는 산이 작게, 가까운 손이 크게</li>
+                        <li>🛣️ 도로: 멀리 갈수록 좁아보임</li>
+                    </ul>
+                </div>
+                <div class="insight-box" style="background: #d1ecf1; border-color: #17a2b8;">
+                    <div class="insight-title" style="color: #0c5460;">📐 Orthographic Camera</div>
+                    <ul style="margin-left: 20px; margin-top: 10px; font-size: 1.2em;">
+                        <li>📋 건축 도면: 1층이든 100층이든 같은 크기</li>
+                        <li>📏 자로 재듯: 실제 비율이 정확</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 11: Geometry & Material 공유 - 이미지 -->
+        <div class="slide image-slide">
+            <div class="slide-number">4</div>
+            <h2>효율적인 메모리 관리</h2>
+            <img src="./image_4_share.png" alt="공유 개념">
+            <div class="image-caption">Geometry와 Material의 공유</div>
+        </div>
+
+        <!-- 슬라이드 12: 공유 비교 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">4</div>
+                <h2 class="slide-title">효율적 vs 비효율적</h2>
+            </div>
+            <div class="slide-content">
+                <div class="comparison-box">
+                    <div class="comparison-item" style="background: #ffe6e6;">
+                        <h4>❌ 비효율적</h4>
+                        <ul style="margin-left: 20px; margin-top: 15px; font-size: 1.15em;">
+                            <li>100개 상자 = Geometry 100번 생성</li>
+                            <li>Material도 100번 생성</li>
+                            <li>메모리 낭비 심각</li>
+                            <li>성능 저하</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="comparison-item" style="background: #e6ffe6;">
+                        <h4>✅ 효율적</h4>
+                        <ul style="margin-left: 20px; margin-top: 15px; font-size: 1.15em;">
+                            <li>Geometry 1번만 생성</li>
+                            <li>Material 1번만 생성</li>
+                            <li>100개 Mesh가 공유</li>
+                            <li>성능 향상!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 13: 붕어빵 비유 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">4</div>
+                <h2 class="slide-title">붕어빵 틀 비유</h2>
+            </div>
+            <div class="slide-content">
+                <div class="insight-box">
+                    <div class="insight-title">💡 쉽게 이해하기</div>
+                    <ul style="margin-left: 20px; margin-top: 15px; font-size: 1.3em; line-height: 2;">
+                        <li><strong>Geometry = 붕어빵 틀</strong><br/>틀은 하나만 있으면 됨</li>
+                        <li style="margin-top: 15px;"><strong>Material = 반죽 레시피</strong><br/>레시피도 하나만 있으면 됨</li>
+                        <li style="margin-top: 15px;"><strong>Mesh = 실제 붕어빵</strong><br/>같은 틀과 레시피로 여러 개 만들기</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 14: 학습 총정리 -->
+        <div class="slide content-slide">
+            <div class="slide-header">
+                <div class="slide-number">✨</div>
+                <h2 class="slide-title">학습 총정리</h2>
+            </div>
+            <div class="slide-content">
+                <div class="content-box">
+                    <h3>🚀 핵심 교훈</h3>
+                    <ul style="margin-left: 20px; margin-top: 15px; font-size: 1.2em; line-height: 2;">
+                        <li><strong>3D 개발은 단순한 좌표 설정이 아니다</strong></li>
+                        <li><strong>카메라는 정말 '카메라'처럼 작동한다</strong></li>
+                        <li><strong>효율적인 메모리 관리가 중요하다</strong></li>
+                        <li><strong>실제 세계의 개념을 코드로 구현한다</strong></li>
+                    </ul>
+                </div>
+                <div class="insight-box" style="margin-top: 30px;">
+                    <div class="insight-title">🎓 앞으로의 학습</div>
+                    <p style="font-size: 1.2em;">Three.js는 <strong>3D 그래픽스의 기본 원리</strong>를 이해하게 해줍니다.</p>
+                    <p style="font-size: 1.2em; margin-top: 10px;">더 복잡한 장면, 애니메이션, 인터랙션으로 발전!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라이드 15: 마지막 -->
+        <div class="slide title-slide">
+            <h1 style="font-size: 4em;">감사합니다! 🚀</h1>
+            <p style="margin-top: 15px; font-size: 1.2em;">Three.js 학습 여정의 시작</p>
+        </div>
+    </div>
+
+    <!-- 네비게이션 버튼 -->
+    <button class="nav-button prev" onclick="changeSlide(-1)">←</button>
+    <button class="nav-button next" onclick="changeSlide(1)">→</button>
+
+    <!-- 슬라이드 인디케이터 -->
+    <div class="slide-indicator" id="indicators"></div>
+
+    <!-- 슬라이드 번호 -->
+    <div class="slide-count">
+        <span id="current-slide">1</span> / <span id="total-slides">15</span>
+    </div>
+
+    <!-- 이미지 모달 -->
+    <div id="imageModal" class="modal">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div class="modal-caption" id="modalCaption"></div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const prevButton = document.querySelector('.nav-button.prev');
+        const nextButton = document.querySelector('.nav-button.next');
+        const indicatorsContainer = document.getElementById('indicators');
+
+        // 인디케이터 생성
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'indicator-dot' + (i === 0 ? ' active' : '');
+            dot.onclick = () => goToSlide(i);
+            indicatorsContainer.appendChild(dot);
+        }
+
+        const indicators = document.querySelectorAll('.indicator-dot');
+
+        function updateSlide() {
+            // 모든 슬라이드 초기화
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index < currentSlide) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            // 현재 슬라이드 활성화
+            slides[currentSlide].classList.add('active');
+
+            // 인디케이터 업데이트
+            indicators.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+
+            // 슬라이드 번호 업데이트
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+
+            // 네비게이션 버튼 상태
+            prevButton.disabled = currentSlide === 0;
+            nextButton.disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            const newSlide = currentSlide + direction;
+            if (newSlide >= 0 && newSlide < totalSlides) {
+                currentSlide = newSlide;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(index) {
+            if (index >= 0 && index < totalSlides) {
+                currentSlide = index;
+                updateSlide();
+            }
+        }
+
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            } else if (e.key === 'ArrowRight' || e.key === ' ') {
+                changeSlide(1);
+            } else if (e.key === 'Home') {
+                goToSlide(0);
+            } else if (e.key === 'End') {
+                goToSlide(totalSlides - 1);
+            }
+        });
+
+        // 터치 스와이프
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeThreshold = 50;
+            if (touchEndX < touchStartX - swipeThreshold) {
+                changeSlide(1);
+            }
+            if (touchEndX > touchStartX + swipeThreshold) {
+                changeSlide(-1);
+            }
+        });
+
+        // 이미지 모달
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        const modalCaption = document.getElementById('modalCaption');
+
+        function setupImageModal() {
+            const images = document.querySelectorAll('.image-slide img');
+            images.forEach(img => {
+                img.onclick = function() {
+                    modal.classList.add('active');
+                    modalImg.src = this.src;
+                    const caption = this.parentElement.querySelector('.image-caption');
+                    if (caption) {
+                        modalCaption.textContent = caption.textContent;
+                    }
+                };
+            });
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        modal.onclick = function(event) {
+            if (event.target === modal || event.target === modalImg) {
+                closeModal();
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+
+        // 초기화
+        setupImageModal();
+        updateSlide();
+    </script>
+</body>
+</html>

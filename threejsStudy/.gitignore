@@ -9,6 +9,7 @@ dist/
 build/
 *.bundle.js
 *.bundle.js.map
+start/
 
 # Editor directories and files
 .vscode/
