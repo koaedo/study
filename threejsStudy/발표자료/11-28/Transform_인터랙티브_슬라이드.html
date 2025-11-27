@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Transform 학습 정리</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .slider-container {
+            width: 90%;
+            max-width: 1400px;
+            height: 90vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease-in-out;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .slide.prev {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+
+        /* 슬라이드 레이아웃 */
+        .slide-content {
+            flex: 1;
+            padding: 60px;
+            overflow-y: auto;
+        }
+
+        .slide-demo {
+            width: 500px;
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .demo-canvas {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .demo-controls {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #e9ecef;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            color: #764ba2;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.8em;
+            /* color: #667eea; */
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.2em;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            font-size: 1.5em;
+            color: #666;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .code-block {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            overflow-x: auto;
+        }
+
+        .coordinate-system {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        .axis {
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .axis-x { background: #ff6b6b; color: white; }
+        .axis-y { background: #51cf66; color: white; }
+        .axis-z { background: #339af0; color: white; }
+
+        /* 데모 컨트롤 버튼 */
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .demo-button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .demo-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .demo-button:active {
+            transform: translateY(0);
+        }
+
+        .demo-button.reset {
+            background: #6c757d;
+        }
+
+        .demo-button.reset:hover {
+            background: #5a6268;
+        }
+
+        .value-display {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin-top: 10px;
+            color: #495057;
+        }
+
+        /* Navigation */
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            color: #667eea;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .nav-button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .nav-button.prev { left: -30px; }
+        .nav-button.next { right: -30px; }
+
+        .dots {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .dot.active {
+            background: white;
+            width: 30px;
+            border-radius: 6px;
+        }
+
+        /* 텍스트 전용 슬라이드 */
+        .slide.text-only .slide-content {
+            width: 100%;
+            padding: 60px 80px;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .comparison-item {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #667eea;
+        }
+
+        ul {
+            margin-left: 40px;
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+
+        li {
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        @media (max-width: 1200px) {
+            .slide-demo {
+                width: 400px;
+            }
+        }
+
+        @media (max-width: 968px) {
+            .slide {
+                flex-direction: column;
+            }
+
+            .slide-content {
+                padding: 30px;
+            }
+
+            .slide-demo {
+                width: 100%;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slider-container">
+        <!-- Slide 1: 제목 -->
+        <div class="slide active text-only">
+            <div class="slide-content">
+                <h1>🎨 Three.js 학습 정리</h1>
+                <p class="subtitle">Transform (변환)</p>
+                <div class="highlight">
+                    <h3>📚 학습 주제</h3>
+                    <ul style="color: white;">
+                        <li><strong>Position</strong>: 3D 공간에서의 위치 (x, y, z)</li>
+                        <li><strong>Scale</strong>: 객체의 크기 조절</li>
+                        <li><strong>Rotation</strong>: 객체의 회전 (라디안 단위)</li>
+                        <li><strong>dat.GUI</strong>: 실시간 값 조절 도구</li>
+                    </ul>
+                </div>
+                <p style="text-align: center; margin-top: 60px; font-size: 1.1em; color: #666;">
+                    📅 2025년 11월 28일<br>
+                    💡 인터랙티브 라이브 데모와 함께하는 학습
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 2: 3D 좌표계 -->
+        <div class="slide text-only">
+            <div class="slide-content">
+                <h2>🎯 3D 좌표계 이해하기</h2>
+                <p>Three.js는 <strong>오른손 좌표계</strong>를 사용합니다.</p>
+
+                <div class="coordinate-system">
+                    <div class="axis axis-x">🔴 X축 (빨강): 좌우 (왼쪽 -, 오른쪽 +)</div>
+                    <div class="axis axis-y">🟢 Y축 (초록): 상하 (아래 -, 위 +)</div>
+                    <div class="axis axis-z">🔵 Z축 (파랑): 앞뒤 (뒤 -, 앞 +)</div>
+                </div>
+
+                <div class="highlight">
+                    <h3>💡 AxesHelper로 좌표축 시각화</h3>
+                    <div class="code-block" style="background: rgba(255,255,255,0.2); border-color: white;">
+const axesHelper = new THREE.AxesHelper(3);<br>
+scene.add(axesHelper);<br>
+// 빨강(X), 초록(Y), 파랑(Z) 선이 표시됨
+                    </div>
+                    <p style="margin-top: 15px; margin-bottom: 0; color: white;">
+                        개발 초기에는 항상 AxesHelper를 추가하면 객체의 위치와 방향을 이해하기 쉽습니다!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Position 데모 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📍 Position (위치)</h2>
+                <p>3D 공간에서 객체가 <strong>어디에 있는지</strong> 결정합니다.</p>
+
+                <h3>기본 사용법</h3>
+                <div class="code-block">
+// 개별 설정<br>
+mesh.position.x = 2;<br>
+mesh.position.y = 1;<br>
+mesh.position.z = -3;<br>
+<br>
+// 한번에 설정<br>
+mesh.position.set(2, 1, -3);
+                </div>
+
+                <p style="margin-top: 30px;">
+                    <strong>오른쪽 데모</strong>에서 버튼을 클릭하여<br>
+                    큐브의 위치를 실시간으로 변경해보세요! 👉
+                </p>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-position"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>X축 (좌우)</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="moveX(-1)">← 왼쪽</button>
+                            <button class="demo-button" onclick="moveX(1)">오른쪽 →</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Y축 (상하)</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="moveY(-1)">↓ 아래</button>
+                            <button class="demo-button" onclick="moveY(1)">위 ↑</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Z축 (앞뒤)</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="moveZ(-1)">← 뒤</button>
+                            <button class="demo-button" onclick="moveZ(1)">앞 →</button>
+                        </div>
+                    </div>
+                    <button class="demo-button reset" onclick="resetPosition()">🔄 초기화</button>
+                    <div class="value-display" id="position-display">Position: (0, 0, 0)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Scale 데모 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📏 Scale (크기)</h2>
+                <p>객체의 크기를 <strong>배율</strong>로 조절합니다. 기본값은 <code>1</code>입니다.</p>
+
+                <h3>기본 사용법</h3>
+                <div class="code-block">
+// 각 축별로 조절<br>
+mesh.scale.x = 2;    // X축 2배<br>
+mesh.scale.y = 0.5;  // Y축 절반<br>
+mesh.scale.z = 1.5;  // Z축 1.5배<br>
+<br>
+// 모든 축 동일하게<br>
+mesh.scale.setScalar(2);
+                </div>
+
+                <p style="margin-top: 30px;">
+                    <strong>Scale 값의 의미:</strong><br>
+                    • 1 = 원본 크기<br>
+                    • 2 = 2배 크기<br>
+                    • 0.5 = 절반 크기<br>
+                    • 0 = 보이지 않음 ⚠️
+                </p>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-scale"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>X축 크기</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="scaleAxis('x', -0.2)">작게</button>
+                            <button class="demo-button" onclick="scaleAxis('x', 0.2)">크게</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Y축 크기</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="scaleAxis('y', -0.2)">작게</button>
+                            <button class="demo-button" onclick="scaleAxis('y', 0.2)">크게</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Z축 크기</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="scaleAxis('z', -0.2)">작게</button>
+                            <button class="demo-button" onclick="scaleAxis('z', 0.2)">크게</button>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button class="demo-button" onclick="scaleAll(0.2)">전체 크게</button>
+                        <button class="demo-button" onclick="scaleAll(-0.2)">전체 작게</button>
+                    </div>
+                    <button class="demo-button reset" onclick="resetScale()">🔄 초기화</button>
+                    <div class="value-display" id="scale-display">Scale: (1, 1, 1)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Rotation 데모 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🔄 Rotation (회전)</h2>
+                <p><strong>중요:</strong> Three.js는 <span style="color: #e74c3c; font-weight: bold;">라디안(Radian)</span> 단위를 사용합니다!</p>
+
+                <div class="code-block">
+// 라디안으로 설정<br>
+mesh.rotation.x = Math.PI / 4;  // 45도<br>
+mesh.rotation.y = Math.PI;       // 180도<br>
+<br>
+// 각도를 라디안으로 변환<br>
+mesh.rotation.x = THREE.MathUtils.degToRad(45);
+                </div>
+
+                <h3>각도-라디안 대응표</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <p style="margin: 5px 0;">• 45° = π/4 ≈ 0.785 라디안</p>
+                    <p style="margin: 5px 0;">• 90° = π/2 ≈ 1.571 라디안</p>
+                    <p style="margin: 5px 0;">• 180° = π ≈ 3.142 라디안</p>
+                    <p style="margin: 5px 0;">• 360° = 2π ≈ 6.283 라디안</p>
+                </div>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-rotation"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>X축 회전</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="rotateAxis('x', -45)">-45°</button>
+                            <button class="demo-button" onclick="rotateAxis('x', 45)">+45°</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Y축 회전</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="rotateAxis('y', -45)">-45°</button>
+                            <button class="demo-button" onclick="rotateAxis('y', 45)">+45°</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Z축 회전</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="rotateAxis('z', -45)">-45°</button>
+                            <button class="demo-button" onclick="rotateAxis('z', 45)">+45°</button>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button class="demo-button" onclick="toggleAutoRotate()">🔄 자동 회전</button>
+                        <button class="demo-button reset" onclick="resetRotation()">초기화</button>
+                    </div>
+                    <div class="value-display" id="rotation-display">Rotation: (0°, 0°, 0°)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 종합 데모 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🎮 종합 실습</h2>
+                <p>Position, Scale, Rotation을 모두 조합하여 사용해보세요!</p>
+
+                <div class="highlight">
+                    <h3 style="color: white; margin-top: 0;">💡 실전 활용</h3>
+                    <ul style="color: white;">
+                        <li>버튼 클릭 효과: 크기가 커졌다 작아지는 애니메이션</li>
+                        <li>회전 애니메이션: 지속적으로 회전하는 객체</li>
+                        <li>이동 애니메이션: 특정 위치로 부드럽게 이동</li>
+                    </ul>
+                </div>
+
+                <p style="margin-top: 30px;">
+                    오른쪽 데모에서 모든 Transform 속성을<br>
+                    자유롭게 조작해보세요!
+                </p>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-combined"></div>
+                <div class="demo-controls" style="overflow-y: auto;">
+                    <div class="control-group">
+                        <label>빠른 프리셋</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="preset1()">프리셋 1</button>
+                            <button class="demo-button" onclick="preset2()">프리셋 2</button>
+                            <button class="demo-button" onclick="preset3()">프리셋 3</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>애니메이션</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="animateJump()">점프</button>
+                            <button class="demo-button" onclick="animateSpin()">스핀</button>
+                            <button class="demo-button" onclick="animateGrow()">커지기</button>
+                        </div>
+                    </div>
+                    <button class="demo-button reset" onclick="resetCombined()">🔄 전체 초기화</button>
+                    <div class="value-display" id="combined-display">
+                        Position: (0, 0, 0)<br>
+                        Scale: (1, 1, 1)<br>
+                        Rotation: (0°, 0°, 0°)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 요약 -->
+        <div class="slide text-only">
+            <div class="slide-content">
+                <h2>📝 핵심 요약</h2>
+                
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h3>📍 Position</h3>
+                        <ul style="font-size: 1em;">
+                            <li>3D 공간 상의 위치</li>
+                            <li>x, y, z 좌표</li>
+                            <li><code>mesh.position.set(x, y, z)</code></li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item">
+                        <h3>📏 Scale</h3>
+                        <ul style="font-size: 1em;">
+                            <li>객체의 크기 배율</li>
+                            <li>기본값: 1</li>
+                            <li><code>mesh.scale.set(x, y, z)</code></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="comparison-item" style="margin-top: 20px;">
+                    <h3>🔄 Rotation</h3>
+                    <ul style="font-size: 1em;">
+                        <li>객체의 회전 (라디안 단위!)</li>
+                        <li>각도 → 라디안: <code>THREE.MathUtils.degToRad(각도)</code></li>
+                        <li>180° = π (Math.PI)</li>
+                    </ul>
+                </div>
+
+                <!-- <div class="highlight" style="margin-top: 30px;">
+                    <h3 style="color: white; margin-top: 0;">💡 다음 학습 주제</h3>
+                    <p style="color: white; margin-bottom: 0;">
+                        <strong>Scene Graph & Geometry</strong><br>
+                        • 객체 그룹화와 계층 구조<br>
+                        • 다양한 3D 도형<br>
+                        • Vertex 정점 조작
+                    </p>
+                </div> -->
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <button class="nav-button prev" onclick="changeSlide(-1)">❮</button>
+        <button class="nav-button next" onclick="changeSlide(1)">❯</button>
+
+        <!-- Dots -->
+        <div class="dots">
+            <span class="dot active" onclick="goToSlide(0)"></span>
+            <span class="dot" onclick="goToSlide(1)"></span>
+            <span class="dot" onclick="goToSlide(2)"></span>
+            <span class="dot" onclick="goToSlide(3)"></span>
+            <span class="dot" onclick="goToSlide(4)"></span>
+            <span class="dot" onclick="goToSlide(5)"></span>
+            <span class="dot" onclick="goToSlide(6)"></span>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    
+    <script>
+        // Slide Navigation
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.dot');
+
+        function showSlide(n) {
+            if (n >= slides.length) currentSlide = 0;
+            if (n < 0) currentSlide = slides.length - 1;
+            else currentSlide = n;
+
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                } else if (index < currentSlide) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        function goToSlide(n) {
+            showSlide(n);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        });
+
+        // Three.js 데모 설정
+        let scenes = {};
+
+        function createScene(containerId) {
+            const container = document.getElementById(containerId);
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e3c72);
+            
+            const camera = new THREE.PerspectiveCamera(
+                75,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.z = 5;
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xff6b6b,
+                roughness: 0.3,
+                metalness: 0.5
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            const axesHelper = new THREE.AxesHelper(2);
+            scene.add(axesHelper);
+            
+            const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+            gridHelper.position.y = -1;
+            scene.add(gridHelper);
+            
+            // 간단한 마우스 컨트롤
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.offsetX - previousMousePosition.x;
+                    const deltaY = e.offsetY - previousMousePosition.y;
+                    
+                    // 카메라를 원점 중심으로 회전
+                    const rotationSpeed = 0.005;
+                    const radius = Math.sqrt(
+                        camera.position.x ** 2 + 
+                        camera.position.y ** 2 + 
+                        camera.position.z ** 2
+                    );
+                    
+                    // 수평 회전 (Y축)
+                    const angleY = -deltaX * rotationSpeed;
+                    const cosY = Math.cos(angleY);
+                    const sinY = Math.sin(angleY);
+                    const newX = camera.position.x * cosY - camera.position.z * sinY;
+                    const newZ = camera.position.x * sinY + camera.position.z * cosY;
+                    camera.position.x = newX;
+                    camera.position.z = newZ;
+                    
+                    // 수직 회전 (제한적으로)
+                    camera.position.y += deltaY * rotationSpeed * radius * 0.5;
+                    camera.position.y = Math.max(-10, Math.min(10, camera.position.y));
+                    
+                    camera.lookAt(0, 0, 0);
+                    
+                    previousMousePosition = { x: e.offsetX, y: e.offsetY };
+                }
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            renderer.domElement.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+            
+            // 마우스 휠로 줌
+            renderer.domElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomSpeed = 0.001;
+                const delta = e.deltaY;
+                const distance = Math.sqrt(
+                    camera.position.x ** 2 + 
+                    camera.position.y ** 2 + 
+                    camera.position.z ** 2
+                );
+                const newDistance = Math.max(2, Math.min(15, distance + delta * zoomSpeed * distance));
+                const scale = newDistance / distance;
+                camera.position.multiplyScalar(scale);
+            }, { passive: false });
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            return { scene, camera, renderer, mesh };
+        }
+
+        // Position 데모
+        scenes.position = createScene('demo-position');
+        
+        function moveX(amount) {
+            scenes.position.mesh.position.x += amount;
+            updatePositionDisplay();
+        }
+        
+        function moveY(amount) {
+            scenes.position.mesh.position.y += amount;
+            updatePositionDisplay();
+        }
+        
+        function moveZ(amount) {
+            scenes.position.mesh.position.z += amount;
+            updatePositionDisplay();
+        }
+        
+        function resetPosition() {
+            scenes.position.mesh.position.set(0, 0, 0);
+            updatePositionDisplay();
+        }
+        
+        function updatePositionDisplay() {
+            const p = scenes.position.mesh.position;
+            document.getElementById('position-display').textContent = 
+                `Position: (${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
+        }
+
+        // Scale 데모
+        scenes.scale = createScene('demo-scale');
+        
+        function scaleAxis(axis, amount) {
+            scenes.scale.mesh.scale[axis] = Math.max(0.1, scenes.scale.mesh.scale[axis] + amount);
+            updateScaleDisplay();
+        }
+        
+        function scaleAll(amount) {
+            ['x', 'y', 'z'].forEach(axis => {
+                scenes.scale.mesh.scale[axis] = Math.max(0.1, scenes.scale.mesh.scale[axis] + amount);
+            });
+            updateScaleDisplay();
+        }
+        
+        function resetScale() {
+            scenes.scale.mesh.scale.set(1, 1, 1);
+            updateScaleDisplay();
+        }
+        
+        function updateScaleDisplay() {
+            const s = scenes.scale.mesh.scale;
+            document.getElementById('scale-display').textContent = 
+                `Scale: (${s.x.toFixed(1)}, ${s.y.toFixed(1)}, ${s.z.toFixed(1)})`;
+        }
+
+        // Rotation 데모
+        scenes.rotation = createScene('demo-rotation');
+        let autoRotate = false;
+        
+        function rotateAxis(axis, degrees) {
+            const radians = THREE.MathUtils.degToRad(degrees);
+            scenes.rotation.mesh.rotation[axis] += radians;
+            updateRotationDisplay();
+        }
+        
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+        }
+        
+        function resetRotation() {
+            scenes.rotation.mesh.rotation.set(0, 0, 0);
+            autoRotate = false;
+            updateRotationDisplay();
+        }
+        
+        function updateRotationDisplay() {
+            const r = scenes.rotation.mesh.rotation;
+            const toDeg = (rad) => THREE.MathUtils.radToDeg(rad).toFixed(0);
+            document.getElementById('rotation-display').textContent = 
+                `Rotation: (${toDeg(r.x)}°, ${toDeg(r.y)}°, ${toDeg(r.z)}°)`;
+        }
+        
+        function animateRotation() {
+            if (autoRotate) {
+                scenes.rotation.mesh.rotation.y += 0.01;
+                updateRotationDisplay();
+            }
+            requestAnimationFrame(animateRotation);
+        }
+        animateRotation();
+
+        // Combined 데모
+        scenes.combined = createScene('demo-combined');
+        
+        function preset1() {
+            scenes.combined.mesh.position.set(1, 1, 0);
+            scenes.combined.mesh.scale.set(1.5, 1.5, 1.5);
+            scenes.combined.mesh.rotation.set(0, Math.PI / 4, 0);
+            updateCombinedDisplay();
+        }
+        
+        function preset2() {
+            scenes.combined.mesh.position.set(-1, 0.5, 1);
+            scenes.combined.mesh.scale.set(0.8, 2, 0.8);
+            scenes.combined.mesh.rotation.set(Math.PI / 6, Math.PI / 3, 0);
+            updateCombinedDisplay();
+        }
+        
+        function preset3() {
+            scenes.combined.mesh.position.set(0, -0.5, -1);
+            scenes.combined.mesh.scale.set(2, 0.5, 1);
+            scenes.combined.mesh.rotation.set(0, 0, Math.PI / 4);
+            updateCombinedDisplay();
+        }
+        
+        function animateJump() {
+            let startY = scenes.combined.mesh.position.y;
+            let time = 0;
+            function jump() {
+                time += 0.05;
+                scenes.combined.mesh.position.y = startY + Math.sin(time * 3) * 2;
+                updateCombinedDisplay();
+                if (time < Math.PI / 1.5) {
+                    requestAnimationFrame(jump);
+                } else {
+                    scenes.combined.mesh.position.y = startY;
+                    updateCombinedDisplay();
+                }
+            }
+            jump();
+        }
+        
+        function animateSpin() {
+            let count = 0;
+            function spin() {
+                scenes.combined.mesh.rotation.y += 0.1;
+                updateCombinedDisplay();
+                count++;
+                if (count < 63) {
+                    requestAnimationFrame(spin);
+                }
+            }
+            spin();
+        }
+        
+        function animateGrow() {
+            let growing = true;
+            let count = 0;
+            function grow() {
+                if (growing) {
+                    scenes.combined.mesh.scale.multiplyScalar(1.05);
+                } else {
+                    scenes.combined.mesh.scale.multiplyScalar(0.95);
+                }
+                updateCombinedDisplay();
+                count++;
+                if (count === 20) growing = false;
+                if (count < 40) {
+                    requestAnimationFrame(grow);
+                }
+            }
+            grow();
+        }
+        
+        function resetCombined() {
+            scenes.combined.mesh.position.set(0, 0, 0);
+            scenes.combined.mesh.scale.set(1, 1, 1);
+            scenes.combined.mesh.rotation.set(0, 0, 0);
+            updateCombinedDisplay();
+        }
+        
+        function updateCombinedDisplay() {
+            const p = scenes.combined.mesh.position;
+            const s = scenes.combined.mesh.scale;
+            const r = scenes.combined.mesh.rotation;
+            const toDeg = (rad) => THREE.MathUtils.radToDeg(rad).toFixed(0);
+            document.getElementById('combined-display').innerHTML = 
+                `Position: (${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})<br>` +
+                `Scale: (${s.x.toFixed(1)}, ${s.y.toFixed(1)}, ${s.z.toFixed(1)})<br>` +
+                `Rotation: (${toDeg(r.x)}°, ${toDeg(r.y)}°, ${toDeg(r.z)}°)`;
+        }
+
+        // 마우스 조작 안내 표시
+        Object.entries(scenes).forEach(([name, {camera, renderer}]) => {
+            const container = renderer.domElement.parentElement;
+            
+            // 마우스 커서가 캔버스 위에 있을 때 안내 표시
+            let hintShown = false;
+            container.addEventListener('mouseenter', () => {
+                if (hintShown) return;
+                hintShown = true;
+                
+                const hint = document.createElement('div');
+                hint.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 20px;
+                    font-size: 0.85em;
+                    pointer-events: none;
+                    z-index: 10;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    white-space: nowrap;
+                `;
+                hint.innerHTML = '🖱️ 드래그: 회전 | 휠: 확대/축소';
+                hint.className = 'control-hint';
+                container.style.position = 'relative';
+                container.appendChild(hint);
+                
+                setTimeout(() => hint.style.opacity = '1', 10);
+                
+                setTimeout(() => {
+                    hint.style.opacity = '0';
+                    setTimeout(() => hint.remove(), 300);
+                }, 3000);
+            });
+        });
+
+        // 윈도우 리사이즈 처리
+        window.addEventListener('resize', () => {
+            Object.values(scenes).forEach(({camera, renderer}) => {
+                const container = renderer.domElement.parentElement;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        });
+    </script>
+</body>
+</html>

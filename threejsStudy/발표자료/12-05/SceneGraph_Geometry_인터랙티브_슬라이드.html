@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Scene Graph & Geometry 학습 정리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .slider-container { width: 90%; max-width: 1400px; height: 90vh; position: relative; }
+        .slide {
+            position: absolute; width: 100%; height: 100%; background: white;
+            border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            opacity: 0; transform: translateX(100%); transition: all 0.5s ease-in-out;
+            overflow: hidden; display: flex;
+        }
+        .slide.active { opacity: 1; transform: translateX(0); }
+        .slide.prev { transform: translateX(-100%); opacity: 0; }
+        .slide-content { flex: 1; padding: 60px; overflow-y: auto; }
+        .slide-demo { width: 500px; background: #f8f9fa; border-left: 3px solid #667eea; display: flex; flex-direction: column; }
+        .demo-canvas { flex: 1; position: relative; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .demo-controls { padding: 20px; background: white; border-top: 2px solid #e9ecef; }
+        h1 { font-size: 3em; color: #667eea; margin-bottom: 20px; text-align: center; }
+        h2 { font-size: 2.5em; color: #764ba2; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h3 { font-size: 1.8em; color: #667eea; margin-top: 30px; margin-bottom: 15px; }
+        p { font-size: 1.2em; line-height: 1.8; color: #333; margin-bottom: 20px; }
+        .subtitle { font-size: 1.5em; color: #666; text-align: center; margin-bottom: 40px; }
+        .highlight {
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 30px; border-radius: 15px; margin: 30px 0;
+        }
+        .code-block {
+            background: #f5f5f5; border-left: 4px solid #667eea; padding: 20px;
+            margin: 20px 0; border-radius: 5px; font-family: 'Courier New', monospace;
+            font-size: 1em; overflow-x: auto;
+        }
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; font-weight: bold; margin-bottom: 10px; color: #667eea; font-size: 1.1em; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .demo-button {
+            padding: 12px 24px; background: #667eea; color: white; border: none;
+            border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: bold;
+            transition: all 0.3s; box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+        }
+        .demo-button:hover { background: #764ba2; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(102, 126, 234, 0.5); }
+        .demo-button:active { transform: translateY(0); }
+        .demo-button.reset { background: #6c757d; }
+        .demo-button.reset:hover { background: #5a6268; }
+        .value-display {
+            background: #e9ecef; padding: 10px 15px; border-radius: 5px;
+            font-family: monospace; margin-top: 10px; color: #495057; font-size: 0.95em;
+        }
+        .nav-button {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9); border: none; width: 60px; height: 60px;
+            border-radius: 50%; cursor: pointer; font-size: 24px; color: #667eea;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); transition: all 0.3s; z-index: 100;
+        }
+        .nav-button:hover { background: #667eea; color: white; transform: translateY(-50%) scale(1.1); }
+        .nav-button.prev { left: -30px; }
+        .nav-button.next { right: -30px; }
+        .dots {
+            position: absolute; bottom: -50px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px;
+        }
+        .dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5); cursor: pointer; transition: all 0.3s;
+        }
+        .dot.active { background: white; width: 30px; border-radius: 6px; }
+        .slide.text-only .slide-content { width: 100%; padding: 60px 80px; }
+        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
+        .comparison-item { background: #f8f9fa; padding: 25px; border-radius: 15px; border: 2px solid #667eea; }
+        ul { margin-left: 40px; font-size: 1.2em; line-height: 1.8; }
+        li { margin-bottom: 15px; color: #444; }
+        .tip-box {
+            background: #d1ecf1; border-left: 5px solid #17a2b8; padding: 20px;
+            border-radius: 8px; margin: 20px 0;
+        }
+        @media (max-width: 1200px) { .slide-demo { width: 400px; } }
+        @media (max-width: 968px) {
+            .slide { flex-direction: column; }
+            .slide-content { padding: 30px; }
+            .slide-demo { width: 100%; height: 400px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="slider-container">
+        <!-- Slide 1: 제목 -->
+        <div class="slide active text-only">
+            <div class="slide-content">
+                <h1>🎨 Three.js 학습 정리</h1>
+                <p class="subtitle">Scene Graph & Geometry</p>
+                <div class="highlight">
+                    <h3>📚 학습 주제</h3>
+                    <ul style="color: white;">
+                        <li><strong>Scene Graph</strong>: 객체 그룹화와 계층 구조</li>
+                        <li><strong>Geometry</strong>: 다양한 3D 도형</li>
+                        <li><strong>세그먼트</strong>: 면 분할과 성능 최적화</li>
+                        <li><strong>Vertex</strong>: 정점 조작과 애니메이션</li>
+                    </ul>
+                </div>
+                <p style="text-align: center; margin-top: 60px; font-size: 1.1em; color: #666;">
+                    📅 2025년 12월 5일<br>
+                    💡 인터랙티브 라이브 데모와 함께하는 학습
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Scene Graph 개념 -->
+        <div class="slide text-only">
+            <div class="slide-content">
+                <h2>🌳 Scene Graph란?</h2>
+                <p>여러 객체를 <strong>그룹</strong>으로 묶어 함께 제어하는 계층 구조입니다.</p>
+
+                <div class="highlight">
+                    <h3 style="color: white; margin-top: 0;">💡 왜 그룹을 사용할까?</h3>
+                    <ul style="color: white;">
+                        <li>여러 객체를 하나처럼 이동/회전/크기 조절</li>
+                        <li>태양계 시뮬레이션 (태양 - 지구 - 달 관계)</li>
+                        <li>캐릭터 모델링 (몸통 - 팔 - 손 관계)</li>
+                        <li>복잡한 3D 모델을 부분별로 관리</li>
+                    </ul>
+                </div>
+
+                <h3>계층 구조 예시</h3>
+                <div class="code-block">
+Scene (씬)<br>
+├─ Camera (카메라)<br>
+├─ Light (조명)<br>
+└─ Group1 (그룹1) ← 부모<br>
+&nbsp;&nbsp;&nbsp;&nbsp;├─ Mesh1 (메시1) ← 자식<br>
+&nbsp;&nbsp;&nbsp;&nbsp;└─ Group2 (그룹2) ← 자식이자 부모<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ Mesh2 (메시2) ← 손자<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ Mesh3 (메시3) ← 손자
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Scene Graph 데모 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🌳 Scene Graph 실습</h2>
+                <p>부모 그룹을 회전하면 <strong>모든 자식</strong>이 함께 회전합니다.</p>
+
+                <h3>코드 예제</h3>
+                <div class="code-block">
+// 그룹 생성<br>
+const group = new THREE.Group();<br>
+<br>
+// 메시들 추가<br>
+group.add(box1);<br>
+group.add(box2);<br>
+group.add(box3);<br>
+<br>
+// 그룹 회전 → 모든 자식이 함께 회전<br>
+group.rotation.y += delta;
+                </div>
+
+                <p style="margin-top: 30px;">
+                    <strong>오른쪽 데모</strong>에서<br>
+                    부모-자식 관계를 확인해보세요! 👉
+                </p>
+
+                <div class="tip-box">
+                    <strong>💡 실전 활용:</strong> 태양계, 로봇 팔, 캐릭터 모델링 등 복잡한 구조를 만들 때 필수!
+                </div>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-scene-graph"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>그룹 제어</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="rotateGroup1()">Group1 회전</button>
+                            <button class="demo-button" onclick="rotateGroup2()">Group2 회전</button>
+                            <button class="demo-button" onclick="rotateGroup3()">Group3 회전</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>모드</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="toggleAutoRotate()">자동 회전</button>
+                            <button class="demo-button reset" onclick="resetGroups()">초기화</button>
+                        </div>
+                    </div>
+                    <div class="value-display" id="group-display">
+                        Group1: 0°<br>
+                        Group2: 0°<br>
+                        Group3: 0°
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Geometry 소개 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🔷 Geometry (도형)</h2>
+                <p><strong>Geometry</strong>는 3D 객체의 <strong>형태(모양)</strong>를 정의합니다.</p>
+
+                <div class="highlight">
+                    <h3 style="color: white; margin-top: 0;">📦 기본 제공 도형</h3>
+                    <ul style="color: white; font-size: 1.1em;">
+                        <li><strong>BoxGeometry</strong> - 육면체</li>
+                        <li><strong>SphereGeometry</strong> - 구</li>
+                        <li><strong>CylinderGeometry</strong> - 원기둥</li>
+                        <li><strong>ConeGeometry</strong> - 원뿔</li>
+                        <li><strong>TorusGeometry</strong> - 도넛</li>
+                        <li><strong>PlaneGeometry</strong> - 평면</li>
+                    </ul>
+                </div>
+
+                <p style="margin-top: 30px;">
+                    오른쪽 데모에서<br>
+                    다양한 도형을 전환해보세요! 👉
+                </p>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-geometry"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>도형 선택</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="changeGeometry('box')">Box</button>
+                            <button class="demo-button" onclick="changeGeometry('sphere')">Sphere</button>
+                            <button class="demo-button" onclick="changeGeometry('cylinder')">Cylinder</button>
+                        </div>
+                        <div class="button-group" style="margin-top: 10px;">
+                            <button class="demo-button" onclick="changeGeometry('cone')">Cone</button>
+                            <button class="demo-button" onclick="changeGeometry('torus')">Torus</button>
+                            <button class="demo-button" onclick="changeGeometry('plane')">Plane</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>옵션</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="toggleWireframe()">Wireframe</button>
+                            <button class="demo-button" onclick="toggleFlatShading()">Flat Shading</button>
+                        </div>
+                    </div>
+                    <div class="value-display" id="geometry-display">현재: Box</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 세그먼트 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📊 세그먼트 (Segment)</h2>
+                <p><strong>세그먼트</strong>는 도형을 이루는 <strong>면의 개수</strong>입니다.</p>
+
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h3>세그먼트 적음</h3>
+                        <div class="code-block">
+new THREE.SphereGeometry(<br>
+&nbsp;&nbsp;1, 8, 8<br>
+);<br>
+// 각진 구
+                        </div>
+                        <p style="margin-top: 15px;">
+                            ✅ 빠른 렌더링<br>
+                            ❌ 덜 부드러움
+                        </p>
+                    </div>
+                    <div class="comparison-item">
+                        <h3>세그먼트 많음</h3>
+                        <div class="code-block">
+new THREE.SphereGeometry(<br>
+&nbsp;&nbsp;1, 64, 64<br>
+);<br>
+// 부드러운 구
+                        </div>
+                        <p style="margin-top: 15px;">
+                            ✅ 부드러운 곡면<br>
+                            ❌ 느린 렌더링
+                        </p>
+                    </div>
+                </div>
+
+                <p style="margin-top: 20px;">
+                    오른쪽에서 세그먼트 수를<br>
+                    조절하며 차이를 확인해보세요! 👉
+                </p>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-segment"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>세그먼트 수</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="setSegment(4)">4 (매우 낮음)</button>
+                            <button class="demo-button" onclick="setSegment(8)">8 (낮음)</button>
+                            <button class="demo-button" onclick="setSegment(16)">16 (중간)</button>
+                        </div>
+                        <div class="button-group" style="margin-top: 10px;">
+                            <button class="demo-button" onclick="setSegment(32)">32 (높음)</button>
+                            <button class="demo-button" onclick="setSegment(64)">64 (매우 높음)</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>표시 모드</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="toggleSegWireframe()">Wireframe</button>
+                        </div>
+                    </div>
+                    <div class="value-display" id="segment-display">
+                        세그먼트: 32<br>
+                        정점 수: 계산 중...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Vertex 조작 -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📐 Vertex (정점) 조작</h2>
+                <p><strong>정점(Vertex)</strong>은 3D 도형을 이루는 <strong>점</strong>들입니다.</p>
+
+                <h3>정점 조작 코드</h3>
+                <div class="code-block">
+const posArray = geometry.attributes.position.array;<br>
+<br>
+// 모든 정점 순회<br>
+for (let i = 0; i < posArray.length; i += 3) {<br>
+&nbsp;&nbsp;// i = x, i+1 = y, i+2 = z<br>
+&nbsp;&nbsp;posArray[i] += Math.sin(time) * 0.01;<br>
+}<br>
+<br>
+// 변경 사항 반영 (필수!)<br>
+geometry.attributes.position.needsUpdate = true;
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 활용 사례:</strong> 파도 효과, 지형 생성, 변형 애니메이션, 파티클 시스템
+                </div>
+
+                <p style="margin-top: 20px;">
+                    오른쪽에서 실시간<br>
+                    정점 애니메이션을 확인하세요! 👉
+                </p>
+            </div>
+            <div class="slide-demo">
+                <div class="demo-canvas" id="demo-vertex"></div>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>애니메이션 효과</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="setVertexEffect('wave')">파도</button>
+                            <button class="demo-button" onclick="setVertexEffect('pulse')">펄스</button>
+                            <button class="demo-button" onclick="setVertexEffect('random')">랜덤</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>강도 조절</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="changeIntensity(-0.5)">-</button>
+                            <button class="demo-button" onclick="changeIntensity(0.5)">+</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>제어</label>
+                        <div class="button-group">
+                            <button class="demo-button" onclick="toggleVertexAnim()">일시정지/재생</button>
+                            <button class="demo-button reset" onclick="resetVertex()">초기화</button>
+                        </div>
+                    </div>
+                    <div class="value-display" id="vertex-display">
+                        효과: Wave<br>
+                        강도: 1.0
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 요약 -->
+        <div class="slide text-only">
+            <div class="slide-content">
+                <h2>📝 핵심 요약</h2>
+                
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h3>🌳 Scene Graph</h3>
+                        <ul style="font-size: 1em;">
+                            <li>객체 그룹화와 계층 구조</li>
+                            <li>부모 변환이 자식에게 상속</li>
+                            <li>복잡한 구조를 체계적으로 관리</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item">
+                        <h3>🔷 Geometry</h3>
+                        <ul style="font-size: 1em;">
+                            <li>다양한 기본 도형 제공</li>
+                            <li>wireframe, side, flatShading</li>
+                            <li>Geometry 재사용으로 최적화</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="comparison" style="margin-top: 20px;">
+                    <div class="comparison-item">
+                        <h3>📊 세그먼트</h3>
+                        <ul style="font-size: 1em;">
+                            <li>면의 분할 정도</li>
+                            <li>많을수록 부드럽지만 무거움</li>
+                            <li>용도에 맞게 선택</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item">
+                        <h3>📐 Vertex</h3>
+                        <ul style="font-size: 1em;">
+                            <li>도형을 이루는 점들</li>
+                            <li>직접 조작 가능</li>
+                            <li>독특한 애니메이션 구현</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="highlight" style="margin-top: 30px;">
+                    <h3 style="color: white; margin-top: 0;">🚀 학습 완료!</h3>
+                    <p style="color: white; font-size: 1.2em; margin-bottom: 0;">
+                        Transform + Scene Graph + Geometry를 마스터하면<br>
+                        어떤 3D 장면이든 만들 수 있습니다!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <button class="nav-button prev" onclick="changeSlide(-1)">❮</button>
+        <button class="nav-button next" onclick="changeSlide(1)">❯</button>
+
+        <!-- Dots -->
+        <div class="dots">
+            <span class="dot active" onclick="goToSlide(0)"></span>
+            <span class="dot" onclick="goToSlide(1)"></span>
+            <span class="dot" onclick="goToSlide(2)"></span>
+            <span class="dot" onclick="goToSlide(3)"></span>
+            <span class="dot" onclick="goToSlide(4)"></span>
+            <span class="dot" onclick="goToSlide(5)"></span>
+            <span class="dot" onclick="goToSlide(6)"></span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.dot');
+
+        function showSlide(n) {
+            if (n >= slides.length) currentSlide = 0;
+            if (n < 0) currentSlide = slides.length - 1;
+            else currentSlide = n;
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === currentSlide) slide.classList.add('active');
+                else if (index < currentSlide) slide.classList.add('prev');
+            });
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === currentSlide));
+        }
+
+        function changeSlide(direction) { showSlide(currentSlide + direction); }
+        function goToSlide(n) { showSlide(n); }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        });
+
+        let scenes = {};
+
+        function createScene(containerId, hasGrid = true) {
+            const container = document.getElementById(containerId);
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e3c72);
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 3, 8);
+            camera.lookAt(0, 0, 0);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            if (hasGrid) {
+                const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+                scene.add(gridHelper);
+            }
+            
+            // 간단한 마우스 컨트롤
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.offsetX - previousMousePosition.x;
+                    const deltaY = e.offsetY - previousMousePosition.y;
+                    
+                    const rotationSpeed = 0.005;
+                    const radius = Math.sqrt(
+                        camera.position.x ** 2 + 
+                        camera.position.y ** 2 + 
+                        camera.position.z ** 2
+                    );
+                    
+                    // 수평 회전
+                    const angleY = -deltaX * rotationSpeed;
+                    const cosY = Math.cos(angleY);
+                    const sinY = Math.sin(angleY);
+                    const newX = camera.position.x * cosY - camera.position.z * sinY;
+                    const newZ = camera.position.x * sinY + camera.position.z * cosY;
+                    camera.position.x = newX;
+                    camera.position.z = newZ;
+                    
+                    // 수직 회전
+                    camera.position.y += deltaY * rotationSpeed * radius * 0.5;
+                    camera.position.y = Math.max(-15, Math.min(15, camera.position.y));
+                    
+                    camera.lookAt(0, 0, 0);
+                    
+                    previousMousePosition = { x: e.offsetX, y: e.offsetY };
+                }
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            renderer.domElement.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+            
+            // 마우스 휠로 줌
+            renderer.domElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomSpeed = 0.001;
+                const delta = e.deltaY;
+                const distance = Math.sqrt(
+                    camera.position.x ** 2 + 
+                    camera.position.y ** 2 + 
+                    camera.position.z ** 2
+                );
+                const newDistance = Math.max(2, Math.min(20, distance + delta * zoomSpeed * distance));
+                const scale = newDistance / distance;
+                camera.position.multiplyScalar(scale);
+            }, { passive: false });
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+            return { scene, camera, renderer };
+        }
+
+        // Scene Graph 데모
+        scenes.sceneGraph = createScene('demo-scene-graph');
+        const group1 = new THREE.Group();
+        const group2 = new THREE.Group();
+        const group3 = new THREE.Group();
+        
+        const geo = new THREE.BoxGeometry(1, 1, 1);
+        const mat1 = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
+        const mat2 = new THREE.MeshStandardMaterial({ color: 0x51cf66 });
+        const mat3 = new THREE.MeshStandardMaterial({ color: 0x339af0 });
+        
+        const box1 = new THREE.Mesh(geo, mat1);
+        const box2 = new THREE.Mesh(geo, mat2);
+        box2.scale.set(0.6, 0.6, 0.6);
+        group2.position.x = 2;
+        const box3 = new THREE.Mesh(geo, mat3);
+        box3.scale.set(0.3, 0.3, 0.3);
+        group3.position.x = 1.5;
+        
+        group3.add(box3);
+        group2.add(box2, group3);
+        group1.add(box1, group2);
+        scenes.sceneGraph.scene.add(group1);
+        
+        let autoRotate = false;
+        function rotateGroup1() { group1.rotation.y += 0.5; updateGroupDisplay(); }
+        function rotateGroup2() { group2.rotation.y += 0.5; updateGroupDisplay(); }
+        function rotateGroup3() { group3.rotation.y += 0.5; updateGroupDisplay(); }
+        function toggleAutoRotate() { autoRotate = !autoRotate; }
+        function resetGroups() {
+            group1.rotation.set(0,0,0);
+            group2.rotation.set(0,0,0);
+            group3.rotation.set(0,0,0);
+            autoRotate = false;
+            updateGroupDisplay();
+        }
+        function updateGroupDisplay() {
+            const toDeg = (r) => THREE.MathUtils.radToDeg(r).toFixed(0);
+            document.getElementById('group-display').innerHTML = 
+                `Group1: ${toDeg(group1.rotation.y)}°<br>` +
+                `Group2: ${toDeg(group2.rotation.y)}°<br>` +
+                `Group3: ${toDeg(group3.rotation.y)}°`;
+        }
+        function animateSceneGraph() {
+            if (autoRotate) {
+                group1.rotation.y += 0.01;
+                group2.rotation.y += 0.02;
+                group3.rotation.y += 0.03;
+                updateGroupDisplay();
+            }
+            requestAnimationFrame(animateSceneGraph);
+        }
+        animateSceneGraph();
+
+        // Geometry 데모
+        scenes.geometry = createScene('demo-geometry');
+        let currentGeo = 'box';
+        let currentMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            new THREE.MeshStandardMaterial({ color: 0xff6b6b })
+        );
+        scenes.geometry.scene.add(currentMesh);
+        
+        function changeGeometry(type) {
+            scenes.geometry.scene.remove(currentMesh);
+            currentGeo = type;
+            let geo;
+            switch(type) {
+                case 'box': geo = new THREE.BoxGeometry(2, 2, 2); break;
+                case 'sphere': geo = new THREE.SphereGeometry(1.5, 32, 32); break;
+                case 'cylinder': geo = new THREE.CylinderGeometry(1, 1, 2, 32); break;
+                case 'cone': geo = new THREE.ConeGeometry(1, 2, 32); break;
+                case 'torus': geo = new THREE.TorusGeometry(1, 0.4, 16, 100); break;
+                case 'plane': geo = new THREE.PlaneGeometry(3, 3, 32, 32); break;
+            }
+            currentMesh = new THREE.Mesh(geo, currentMesh.material);
+            scenes.geometry.scene.add(currentMesh);
+            document.getElementById('geometry-display').textContent = `현재: ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        }
+        
+        function toggleWireframe() {
+            currentMesh.material.wireframe = !currentMesh.material.wireframe;
+        }
+        
+        function toggleFlatShading() {
+            currentMesh.material.flatShading = !currentMesh.material.flatShading;
+            currentMesh.material.needsUpdate = true;
+        }
+        
+        function animateGeometry() {
+            currentMesh.rotation.y += 0.01;
+            requestAnimationFrame(animateGeometry);
+        }
+        animateGeometry();
+
+        // Segment 데모
+        scenes.segment = createScene('demo-segment');
+        let segmentMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(1.5, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0x51cf66 })
+        );
+        scenes.segment.scene.add(segmentMesh);
+        
+        function setSegment(seg) {
+            scenes.segment.scene.remove(segmentMesh);
+            const geo = new THREE.SphereGeometry(1.5, seg, seg);
+            segmentMesh = new THREE.Mesh(geo, segmentMesh.material);
+            scenes.segment.scene.add(segmentMesh);
+            const vertices = geo.attributes.position.count;
+            document.getElementById('segment-display').innerHTML =
+                `세그먼트: ${seg}<br>정점 수: ${vertices}`;
+        }
+        
+        function toggleSegWireframe() {
+            segmentMesh.material.wireframe = !segmentMesh.material.wireframe;
+        }
+        
+        function animateSegment() {
+            segmentMesh.rotation.y += 0.01;
+            requestAnimationFrame(animateSegment);
+        }
+        animateSegment();
+
+        // Vertex 데모
+        scenes.vertex = createScene('demo-vertex', false);
+        const vertexGeo = new THREE.SphereGeometry(1.5, 64, 64);
+        const vertexMat = new THREE.MeshStandardMaterial({ 
+            color: 0x339af0,
+            flatShading: true
+        });
+        const vertexMesh = new THREE.Mesh(vertexGeo, vertexMat);
+        scenes.vertex.scene.add(vertexMesh);
+        
+        const posArray = vertexGeo.attributes.position.array;
+        const originalPos = new Float32Array(posArray);
+        const randomValues = new Float32Array(posArray.length);
+        for (let i = 0; i < randomValues.length; i++) {
+            randomValues[i] = Math.random();
+        }
+        
+        let vertexEffect = 'wave';
+        let vertexIntensity = 1.0;
+        let vertexAnimating = true;
+        const clock = new THREE.Clock();
+        
+        function setVertexEffect(effect) {
+            vertexEffect = effect;
+            for (let i = 0; i < posArray.length; i++) {
+                posArray[i] = originalPos[i];
+            }
+            vertexGeo.attributes.position.needsUpdate = true;
+            document.getElementById('vertex-display').innerHTML =
+                `효과: ${effect.charAt(0).toUpperCase() + effect.slice(1)}<br>강도: ${vertexIntensity.toFixed(1)}`;
+        }
+        
+        function changeIntensity(delta) {
+            vertexIntensity = Math.max(0.1, Math.min(3.0, vertexIntensity + delta));
+            document.getElementById('vertex-display').innerHTML =
+                `효과: ${vertexEffect.charAt(0).toUpperCase() + vertexEffect.slice(1)}<br>강도: ${vertexIntensity.toFixed(1)}`;
+        }
+        
+        function toggleVertexAnim() {
+            vertexAnimating = !vertexAnimating;
+        }
+        
+        function resetVertex() {
+            for (let i = 0; i < posArray.length; i++) {
+                posArray[i] = originalPos[i];
+            }
+            vertexGeo.attributes.position.needsUpdate = true;
+            vertexIntensity = 1.0;
+            vertexEffect = 'wave';
+            vertexAnimating = true;
+            document.getElementById('vertex-display').innerHTML =
+                `효과: Wave<br>강도: 1.0`;
+        }
+        
+        function animateVertex() {
+            if (vertexAnimating) {
+                const time = clock.getElapsedTime() * 2;
+                for (let i = 0; i < posArray.length; i += 3) {
+                    const x = originalPos[i];
+                    const y = originalPos[i + 1];
+                    const z = originalPos[i + 2];
+                    
+                    if (vertexEffect === 'wave') {
+                        const dist = Math.sqrt(x*x + y*y + z*z);
+                        const wave = Math.sin(dist * 3 + time) * 0.1 * vertexIntensity;
+                        posArray[i] = x + x * wave;
+                        posArray[i + 1] = y + y * wave;
+                        posArray[i + 2] = z + z * wave;
+                    } else if (vertexEffect === 'pulse') {
+                        const pulse = Math.sin(time * 2) * 0.1 * vertexIntensity;
+                        posArray[i] = x + x * pulse;
+                        posArray[i + 1] = y + y * pulse;
+                        posArray[i + 2] = z + z * pulse;
+                    } else if (vertexEffect === 'random') {
+                        posArray[i] = x + Math.sin(time + randomValues[i] * 100) * 0.05 * vertexIntensity;
+                        posArray[i + 1] = y + Math.sin(time + randomValues[i + 1] * 100) * 0.05 * vertexIntensity;
+                        posArray[i + 2] = z + Math.sin(time + randomValues[i + 2] * 100) * 0.05 * vertexIntensity;
+                    }
+                }
+                vertexGeo.attributes.position.needsUpdate = true;
+            }
+            requestAnimationFrame(animateVertex);
+        }
+        animateVertex();
+
+        // 마우스 조작 안내 표시
+        Object.entries(scenes).forEach(([name, {camera, renderer}]) => {
+            const container = renderer.domElement.parentElement;
+            
+            // 마우스 커서가 캔버스 위에 있을 때 안내 표시
+            let hintShown = false;
+            container.addEventListener('mouseenter', () => {
+                if (hintShown) return;
+                hintShown = true;
+                
+                const hint = document.createElement('div');
+                hint.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 20px;
+                    font-size: 0.85em;
+                    pointer-events: none;
+                    z-index: 10;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    white-space: nowrap;
+                `;
+                hint.innerHTML = '🖱️ 드래그: 회전 | 휠: 확대/축소';
+                hint.className = 'control-hint';
+                container.style.position = 'relative';
+                container.appendChild(hint);
+                
+                setTimeout(() => hint.style.opacity = '1', 10);
+                
+                setTimeout(() => {
+                    hint.style.opacity = '0';
+                    setTimeout(() => hint.remove(), 300);
+                }, 3000);
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            Object.values(scenes).forEach(({camera, renderer}) => {
+                const container = renderer.domElement.parentElement;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        });
+    </script>
+</body>
+</html>
